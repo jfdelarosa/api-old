@@ -1,10 +1,9 @@
 <?php
 require 'flight/Flight.php';
-require 'modules/usuarios/routes.php';
 
-Flight::route('/', function(){
-  Flight::json(array('body' => 'Hola mundo'));
-});
+Flight::register('db', 'mysqli', array('localhost', 'root', '', 'api'));
+$db = Flight::db();
+require 'modules/usuarios/routes.php';
 
 Flight::start();
 ?>
