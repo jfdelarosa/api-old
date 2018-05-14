@@ -8,7 +8,7 @@ class Usuarios{
     $this->db = $db;
     $this->tienda_id = 1;
   }
-  
+
   // GET /usuarios
   public function get_all(){
     $query = "SELECT usuarios.id, usuarios.username, usuarios.nombre, roles.nombre AS rol, roles.id AS rol_id FROM usuarios
@@ -27,11 +27,47 @@ class Usuarios{
 
   // POST /usuarios
   public function new_usuario(){
-    if(true){
-      $response = array('body' => 'usuario creado');
+    $error = false;
+    $post_keys = array('rol_id', 'username', 'nombre', 'password');
+    $clean = array();
+    foreach($post_keys as $key){
+      if(isset($_POST[$key]) && $_POST[$key] != ""){
+        $clean[$key] = $_POST[$key];
+      }else{
+        $error = true;
+        break;
+      }
+    }
+
+    if(!$error){
+
+      $query = "SELECT id FROM roles WHERE id = '".$clean['rol_id']."' AND tienda_id = '".$this->tienda_id."'";
+      if($result = $this->db->query($query)){
+        if($result->num_rows == 1){
+          $query = "INSERT INTO usuarios (rol_id, username, nombre, password, tienda_id) VALUES ('".$clean['rol_id']."', '".$clean['username']."', '".$clean['nombre']."', '".$clean['password']."', '".$this->tienda_id."')";
+          if($result = $this->db->query($query)){
+            $response = array('body' => 'usuario creado');
+          }else{
+            $response = array(
+              'error' => 'Hubo un error al crear el usuario',
+              'error_code' => 2
+            );
+          }
+        }else{
+          $response = array(
+            'error' => 'No se encontró el rol especificado',
+            'error_code' => 2
+          );
+        }
+      }else{
+        $response = array(
+          'error' => 'hubo un error al buscar el rol especificado',
+          'error_code' => 2
+        );
+      }
     }else{
       $response = array(
-        'error' => 'Hubo un error al crear el usuario',
+        'error' => 'No se enviaron los campos corresspondentes',
         'error_code' => 2
       );
     }
