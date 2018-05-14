@@ -1,3 +1,4 @@
+SET GLOBAL foreign_key_checks = 0; 
 DROP TABLE IF EXISTS cajas;
 
 CREATE TABLE `cajas` (
@@ -35,8 +36,11 @@ CREATE TABLE `permisos` (
   PRIMARY KEY (`id`),
   KEY `permisos_tienda` (`tienda_id`),
   CONSTRAINT `permisos_tienda` FOREIGN KEY (`tienda_id`) REFERENCES `tienda` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
 
+INSERT INTO permisos VALUES("1","ver_usuarios","ver usuarios","1"),
+("2","editar_usuarios","editar usuarios","1"),
+("3","eliminar_usuarios","eliminar usuarios","1");
 
 
 
@@ -81,8 +85,28 @@ CREATE TABLE `roles` (
   KEY `roles_tienda` (`tienda_id`),
   CONSTRAINT `roles_permisos` FOREIGN KEY (`permisos_id`) REFERENCES `permisos` (`id`),
   CONSTRAINT `roles_tienda` FOREIGN KEY (`tienda_id`) REFERENCES `tienda` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
 
+INSERT INTO roles VALUES("1","administrador","1","1");
+
+
+
+DROP TABLE IF EXISTS roles_permisos;
+
+CREATE TABLE `roles_permisos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `roles_id` int(11) DEFAULT NULL,
+  `permiso_id` int(11) DEFAULT NULL,
+  KEY `id` (`id`),
+  KEY `roles_id` (`roles_id`),
+  KEY `permiso_id` (`permiso_id`),
+  CONSTRAINT `permiso_id` FOREIGN KEY (`permiso_id`) REFERENCES `permisos` (`id`),
+  CONSTRAINT `roles_id` FOREIGN KEY (`roles_id`) REFERENCES `roles` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+
+INSERT INTO roles_permisos VALUES("1","1","1"),
+("2","1","2"),
+("3","1","3");
 
 
 
@@ -94,8 +118,10 @@ CREATE TABLE `tienda` (
   `nombre` varchar(100) COLLATE utf8_spanish_ci NOT NULL,
   `direccion` varchar(255) COLLATE utf8_spanish_ci NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
 
+INSERT INTO tienda VALUES("1","18QSno5a1Irz1rGO","Tienda 1","México"),
+("2","A9sFapgUEpgGTpLu","Tienda 2","Guatemala");
 
 
 
@@ -128,8 +154,10 @@ CREATE TABLE `usuarios` (
   KEY `usuarios_tienda` (`tienda_id`),
   CONSTRAINT `roles_usuarios` FOREIGN KEY (`rol_id`) REFERENCES `roles` (`id`),
   CONSTRAINT `usuarios_tienda` FOREIGN KEY (`tienda_id`) REFERENCES `tienda` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
 
+INSERT INTO usuarios VALUES("1","1","jfdelarosa","Juan Fernando","1","pass"),
+("1","2","gamerx","luis leiva","2","pass");
 
 
 

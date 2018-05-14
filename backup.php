@@ -9,7 +9,7 @@ while($row = mysqli_fetch_row($result)){
   $tables[] = $row[0];
 }
 
-$return = '';
+$return = "SET GLOBAL foreign_key_checks = 0; \n";
 foreach($tables as $table){
   $result = mysqli_query($link, 'SELECT * FROM '.$table);
   $num_fields = mysqli_num_fields($result);
@@ -45,7 +45,6 @@ foreach($tables as $table){
   }
   $return.="\n\n\n";
 }
-
 $files = glob("*.sql");
 foreach($files as $file){
   unlink($file);

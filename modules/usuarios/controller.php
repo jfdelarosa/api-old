@@ -10,9 +10,11 @@ class Usuarios{
   }
   // GET /usuarios
   public function get_all(){
-    $query = "SELECT * FROM usuarios WHERE tienda_id = " . $this->tienda_id;
+    $query = "SELECT usuarios.id, usuarios.username, usuarios.nombre, roles.nombre AS rol, roles.id AS rol_id FROM usuarios
+    JOIN roles on roles.id = usuarios.rol_id AND usuarios.tienda_id = '" . $this->tienda_id . "'";
     if($result = $this->db->query($query)){
-      $response = array('body' => $result->fetch_assoc());
+      for($set = array(); $row = $result->fetch_assoc(); $set[] = $row);
+      $response = array('body' => $set);
     }else{
       $response = array(
         'error' => 'Hubo un error al obtener los usuarios',
@@ -37,8 +39,22 @@ class Usuarios{
 
   // GET /usuarios/$id
   public function get_usuario($id){
-    if(true){
-      $response = array('body' => 'usuario ' . $id);
+    $query = "SELECT usuarios.id, usuarios.username, usuarios.nombre, usuarios.password, roles.nombre AS rol, roles.id AS rol_id FROM usuarios
+    JOIN roles ON roles.id = usuarios.rol_id AND usuarios.id = '" . $id . "' AND usuarios.tienda_id = '" . $this->tienda_id . "'";
+    if($result = $this->db->query($query)){
+      if($result->num_rows == 1){
+        $user = $result->fetch_assoc();
+        $query = "SELECT permisos.nombre as permiso FROM permisos JOIN roles_permisos ON roles_permisos.permiso_id = permisos.id AND roles_permisos.roles_id = '". $user['rol_id'] ."'";
+        $result = $this->db->query($query);
+        for($set = array(); $row = $result->fetch_assoc(); $set[] = $row);
+        $user['permisos'] = $set;
+        $response = array('body' => $user);
+      }else{
+        $response = array(
+          'error' => 'No se encontró al usuario ' . $id,
+          'error_code' => 3
+        );
+      }
     }else{
       $response = array(
         'error' => 'Hubo un error al obtener el usuario ' . $id,
