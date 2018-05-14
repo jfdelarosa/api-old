@@ -8,6 +8,7 @@ class Usuarios{
     $this->db = $db;
     $this->tienda_id = 1;
   }
+  
   // GET /usuarios
   public function get_all(){
     $query = "SELECT usuarios.id, usuarios.username, usuarios.nombre, roles.nombre AS rol, roles.id AS rol_id FROM usuarios
