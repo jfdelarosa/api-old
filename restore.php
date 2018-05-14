@@ -11,7 +11,7 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 $data = curl_exec($ch);
 curl_close($ch);
 
-if($mysqli->query($data)){
+if($mysqli->multi_query($data)){
   echo "ok";
 }else{
   echo $mysqli->error;
