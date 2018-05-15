@@ -2,24 +2,25 @@
 class Usuarios{
 
   public $db;
+  public $debug;
   public $tienda_id;
 
   function __construct($db){
     $this->db = $db;
     $this->tienda_id = 1;
+    $this->debug = true;
   }
 
   // GET /usuarios
   public function get_all(){
-    $query = "SELECT usuarios.id, usuarios.username, usuarios.nombre, roles.nombre AS rol, roles.id AS rol_id FROM usuarios
-    JOIN roles on roles.id = usuarios.rol_id AND usuarios.tienda_id = '" . $this->tienda_id . "'";
-    if($result = $this->db->query($query)){
-      for($set = array(); $row = $result->fetch_assoc(); $set[] = $row);
-      $response = array('body' => $set);
+    $cols = array('u.id', 'u.username', 'u.nombre', 'r.nombre rol', 'r.id rol_id');
+    $this->db->join("roles r", "r.id = u.rol_id", "LEFT");
+    if($result = $this->db->get("usuarios u", null, $cols)){
+      $response = array('body' => $result);
     }else{
       $response = array(
         'error' => 'Hubo un error al obtener los usuarios',
-        'error_code' => 1
+        'error_code' => 200
       );
     }
     Flight::json($response);
@@ -28,47 +29,34 @@ class Usuarios{
   // POST /usuarios
   public function new_usuario(){
     $error = false;
-    $post_keys = array('rol_id', 'username', 'nombre', 'password');
     $clean = array();
-    foreach($post_keys as $key){
+    foreach($_POST as $key => $value){
       if(isset($_POST[$key]) && $_POST[$key] != ""){
-        $clean[$key] = $_POST[$key];
+        $clean[$key] = $value;
       }else{
         $error = true;
         break;
       }
     }
-
     if(!$error){
-
-      $query = "SELECT id FROM roles WHERE id = '".$clean['rol_id']."' AND tienda_id = '".$this->tienda_id."'";
-      if($result = $this->db->query($query)){
-        if($result->num_rows == 1){
-          $query = "INSERT INTO usuarios (rol_id, username, nombre, password, tienda_id) VALUES ('".$clean['rol_id']."', '".$clean['username']."', '".$clean['nombre']."', '".$clean['password']."', '".$this->tienda_id."')";
-          if($result = $this->db->query($query)){
-            $response = array('body' => 'usuario creado');
-          }else{
-            $response = array(
-              'error' => 'Hubo un error al crear el usuario',
-              'error_code' => 2
-            );
-          }
-        }else{
-          $response = array(
-            'error' => 'No se encontró el rol especificado',
-            'error_code' => 2
-          );
-        }
+      $data = array('rol_id' => $clean['rol_id'],
+        'username' => $clean['username'],
+        'nombre' => $clean['nombre'],
+        'password' => $clean['password'],
+        'tienda_id' => $this->tienda_id
+      );
+      if($db->insert('usuarios', $data)){
+        $response = array('body' => 'usuario creado');
       }else{
         $response = array(
-          'error' => 'hubo un error al buscar el rol especificado',
-          'error_code' => 2
+          'error' => 'Hubo un error al crear el usuario',
+          'error_code' => 211
         );
       }
     }else{
       $response = array(
-        'error' => 'No se enviaron los campos corresspondentes',
-        'error_code' => 2
+        'error' => 'Error en los campos correspondentes',
+        'error_code' => 210
       );
     }
     Flight::json($response);
@@ -76,26 +64,33 @@ class Usuarios{
 
   // GET /usuarios/$id
   public function get_usuario($id){
-    $query = "SELECT usuarios.id, usuarios.username, usuarios.nombre, usuarios.password, roles.nombre AS rol, roles.id AS rol_id FROM usuarios
-    JOIN roles ON roles.id = usuarios.rol_id AND usuarios.id = '" . $id . "' AND usuarios.tienda_id = '" . $this->tienda_id . "'";
-    if($result = $this->db->query($query)){
-      if($result->num_rows == 1){
-        $user = $result->fetch_assoc();
-        $query = "SELECT permisos.nombre as permiso FROM permisos JOIN roles_permisos ON roles_permisos.permiso_id = permisos.id AND roles_permisos.roles_id = '". $user['rol_id'] ."'";
-        $result = $this->db->query($query);
-        for($set = array(); $row = $result->fetch_assoc(); $set[] = $row);
-        $user['permisos'] = $set;
+    $cols = array('u.id', 'u.username', 'u.nombre', 'u.password', 'r.nombre rol', 'r.id AS rol_id');
+    $this->db->join('roles r', 'r.id = u.rol_id', 'LEFT');
+    $this->db->where('u.tienda_id', $this->tienda_id);
+    $this->db->where('u.id', $id);
+
+    if($user = $this->db->getOne("usuarios u", $cols)){
+      if($this->debug){
+        $user['query'][] = $this->db->getLastQuery();
+      }
+      $this->db->join('roles_permisos rp', 'rp.permiso_id = p.id');
+      $this->db->joinWhere('roles_permisos rp', 'rp.roles_id', $user['rol_id']);
+      if($result = $this->db->get("permisos p", null, array('p.id', 'p.nombre nombre'))){
+        $user['permisos'] = $result;
+        if($this->debug){
+          $user['query'][] = $this->db->getLastQuery();
+        }
         $response = array('body' => $user);
       }else{
         $response = array(
-          'error' => 'No se encontró al usuario ' . $id,
-          'error_code' => 3
+          'error' => 'Hubo un error al obtener los permisos del usuario',
+          'error_code' => 221
         );
       }
     }else{
       $response = array(
-        'error' => 'Hubo un error al obtener el usuario ' . $id,
-        'error_code' => 3
+        'error' => 'Hubo un error al obtener al usuario solicitado',
+        'error_code' => 220
       );
     }
     Flight::json($response);
@@ -103,72 +98,80 @@ class Usuarios{
 
   // PUT /usuarios/$id
   public function edit_usuario($id){
-    if(true){
-      $response = array('body' => 'usuario ' . $id);
+    $put = json_decode(file_get_contents("php://input"), true);
+
+    $error = false;
+    $clean = array();
+    foreach($put as $key => $value){
+      if($put[$key] != ""){
+        $clean[$key] = $value;
+      }else{
+        $error = true;
+        break;
+      }
+    }
+
+    if(!$error){
+      $this->db->where('id', $id);
+      if($this->db->update('usuarios', $clean)){
+        $response = array('body' => 'Usuario editado correctamente');
+      }else{
+        $response = array(
+          'error' => 'Hubo un error al editar el usuario',
+          'error_code' => 231
+        );
+      }
     }else{
       $response = array(
-        'error' => 'Hubo un error al editar el usuario ' . $id,
-        'error_code' => 4
+        'error' => 'Error en los campos correspondentes',
+        'error_code' => 230
       );
     }
+
     Flight::json($response);
   }
 
   // DELETE /usuarios/$id
   public function delete_usuario($id){
-    if(true){
-      $response = array('body' => 'usuario ' . $id);
+    $this->db->where('id', $id);
+    if($this->db->delete('usuarios')){
+      $response = array('body' => 'Usuario eliminado con éxito');
     }else{
       $response = array(
-        'error' => 'Hubo un error al eliminar el usuario ' . $id,
-        'error_code' => 5
+        'error' => 'Hubo un error al eliminar el usuario ',
+        'error_code' => 240
       );
     }
     Flight::json($response);
   }
 
   public function login(){
-    if(isset($_GET['u']) && isset($_GET['p'])){
-      $usuario = $_GET['u'];
-      $pass = $_GET['p'];
-      $query = "SELECT id, username, password FROM usuarios WHERE username = '" . $usuario . "' AND tienda_id = '" . $this->tienda_id . "'";
-      if($result = $this->db->query($query)){
-        if($result->num_rows() == 1){
-          $row = $result->fetch_assoc();
-          // TODO: add hash function
-          if($pass == $row['hash']){
-            $query = "SELECT * FROM usuarios WHERE id = '" . $row['id'] . "' AND tienda_id = '" . $this->tienda_id . "'";
-            if($result = $this->db->query($query)){
-              $response = array('body' => $result->fetch_assoc());
-            }else{
-              $response = array(
-                'error' => 'El login funcionó, pero hubo un error desconocido',
-                'error_code' => 1
-              );
-            }
-          }else{
-            $response = array(
-              'error' => 'Las contraseñas no coinciden',
-              'error_code' => 1
-            );
-          }
+    if(isset($_POST['username']) && isset($_POST['password'])){
+      $usuario = $_POST['username'];
+      $pass = $_POST['password'];
+
+      $this->db->where('username', $usuario);
+      $this->db->where('tienda_id', $this->tienda_id);
+      if($user = $this->db->getOne('usuarios', array('id', 'username', 'password'))){
+        if($pass == $user['password']){
+          $this->get_usuario($user['id']);
         }else{
           $response = array(
-            'error' => 'El usuario no existe',
-            'error_code' => 1
+            'error' => 'Las contraseñas no coinciden',
+            'error_code' => 253
           );
         }
-  
       }else{
         $response = array(
-          'error' => 'Hubo un error al obtener los usuarios',
-          'error_code' => 1
+          'error' => 'El usuario no existe',
+          'error_code' => 252
         );
       }
+
     }else{
       $response = array(
         'error' => 'No se recibieron los parámetros requeridos',
-        'error_code' => 1
+        'error_code' => 251
       );
     }
     Flight::json($response);
