@@ -45,7 +45,7 @@ class Usuarios{
         'password' => $clean['password'],
         'tienda_id' => $this->tienda_id
       );
-      if($db->insert('usuarios', $data)){
+      if($this->db->insert('usuarios', $data)){
         $response = array('body' => 'usuario creado');
       }else{
         $response = array(
@@ -98,33 +98,15 @@ class Usuarios{
 
   // PUT /usuarios/$id
   public function edit_usuario($id){
-    $put = json_decode(file_get_contents("php://input"), true);
+    parse_str(file_get_contents('php://input'), $_PUT);
 
-    $error = false;
-    $clean = array();
-    foreach($put as $key => $value){
-      if($put[$key] != ""){
-        $clean[$key] = $value;
-      }else{
-        $error = true;
-        break;
-      }
-    }
-
-    if(!$error){
-      $this->db->where('id', $id);
-      if($this->db->update('usuarios', $clean)){
-        $response = array('body' => 'Usuario editado correctamente');
-      }else{
-        $response = array(
-          'error' => 'Hubo un error al editar el usuario',
-          'error_code' => 231
-        );
-      }
+    $this->db->where('id', $id);
+    if($this->db->update('usuarios', $_PUT)){
+      $response = array('body' => 'Usuario editado correctamente');
     }else{
       $response = array(
-        'error' => 'Error en los campos correspondentes',
-        'error_code' => 230
+        'error' => 'Hubo un error al editar el usuario',
+        'error_code' => 231
       );
     }
 
