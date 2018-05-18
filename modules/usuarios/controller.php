@@ -99,7 +99,7 @@ class Usuarios{
   // PUT /usuarios/$id
   public function edit_usuario($id){
     parse_str(file_get_contents('php://input'), $_PUT);
-
+    
     $this->db->where('id', $id);
     if($this->db->update('usuarios', $_PUT)){
       $response = array('body' => 'Usuario editado correctamente');
